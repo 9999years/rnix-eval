@@ -1,0 +1,20 @@
+[package]
+name = "rnix-eval"
+version = "0.1.0"
+authors = ["Rebecca Turner <rbt@sent.as>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "rnix_eval"
+path = "src/lib.rs"
+
+[dependencies]
+thiserror = "1.0.10"
+json = "0.12.1"
+toml = "0.5.6"
+
+[dev-dependencies]
+pretty_assertions = "0.6.1"
+indoc = "0.3.5"
