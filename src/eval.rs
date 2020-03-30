@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use crate::env::{Env, StaticEnv};
-use crate::nix_expr::{Expr, ExprVar};
+use crate::env::{Env, EnvKind, StaticEnv};
+use crate::nix_expr::{Expr, ExprExt, ExprVar};
 use crate::pos::Pos;
 use crate::symbol_table::{Symbol, SymbolTable};
-use crate::value::Value;
+use crate::{NixError, NixResult, Value};
 
 pub type FileParseCache<'arena> = HashMap<PathBuf, Box<Expr<'arena>>>;
 pub type FileEvalCache<'arena> = HashMap<PathBuf, Value<'arena>>;
@@ -90,17 +90,55 @@ pub struct EvalState<'arena> {
     // attr_selects: HashMap<Pos<'arena>, usize>,
 }
 
-pub enum Eval {
+#[derive(Copy, Clone, PartialEq)]
+pub enum ShouldEval {
     Yes,
     No,
 }
 
 impl<'arena> EvalState<'arena> {
+    pub fn eval_attrs(
+        &self,
+        env: &Env<'arena>,
+        expr: &'arena impl ExprExt,
+    ) -> NixResult<Value<'arena>> {
+        let ret = expr.eval(&self, env)?;
+        if matches!(ret, Value::Attrs(_)) {
+            Err(NixError::Type(format!(
+                // TODO pretty-print the value
+                "value is {:?} while a set was expected",
+                ret
+            )))
+        } else {
+            Ok(*ret)
+        }
+    }
+
     pub fn lookup_var(
         &self,
         env: &Env<'arena>,
         var: &ExprVar<'arena>,
-        should_eval: Eval,
-    ) -> Box<Value<'arena>> {
+        should_eval: ShouldEval,
+    ) -> NixResult<Value<'arena>> {
+        let env = env
+            .into_iter()
+            .find(|env_level| env_level.level == var.level)
+            .unwrap()
+            .env;
+
+        if !var.from_with {
+            return Ok(env.values[var.displ.0]);
+        }
+
+        loop {
+            if env.kind == EnvKind::HasWithExpr {
+                if should_eval == ShouldEval::No {
+                    return Err(NixError::VarLookupUnevaluated(var.name.into()));
+                }
+                // let value = self.eval_attrs(&env.up.unwrap(), env.values[0])?;
+            }
+        }
+
+        Ok(Value::Blackhole)
     }
 }

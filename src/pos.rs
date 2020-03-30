@@ -17,9 +17,8 @@ impl Display for KnownPos<'_> {
     }
 }
 
-impl ToOwned for KnownPos<'_> {
-    type Owned = OwnedKnownPos;
-    fn to_owned(&self) -> Self::Owned {
+impl<'arena> KnownPos<'arena> {
+    pub fn to_owned(&self) -> OwnedKnownPos {
         OwnedKnownPos {
             file: self.file.to_owned(),
             line: self.line,
@@ -41,25 +40,14 @@ impl Display for OwnedKnownPos {
     }
 }
 
-impl<'a> Borrow<KnownPos<'a>> for OwnedKnownPos {
-    fn borrow(&self) -> &KnownPos<'a> {
-        &KnownPos {
-            file: &self.file,
-            line: self.line,
-            column: self.column,
-        }
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub enum Pos<'arena> {
     Undefined,
     Known(KnownPos<'arena>),
 }
 
-impl ToOwned for Pos<'_> {
-    type Owned = OwnedPos;
-    fn to_owned(&self) -> Self::Owned {
+impl<'arena> Pos<'arena> {
+    pub fn to_owned(&self) -> OwnedPos {
         match self {
             Pos::Undefined => OwnedPos::Undefined,
             Pos::Known(pos) => OwnedPos::Known(pos.to_owned()),
@@ -80,15 +68,6 @@ impl Display for Pos<'_> {
 pub enum OwnedPos {
     Undefined,
     Known(OwnedKnownPos),
-}
-
-impl<'a> Borrow<Pos<'a>> for OwnedPos {
-    fn borrow(&self) -> &Pos<'a> {
-        match self {
-            OwnedPos::Undefined => &Pos::Undefined,
-            OwnedPos::Known(pos) => &Pos::Known(*pos.borrow()),
-        }
-    }
 }
 
 impl Display for OwnedPos {

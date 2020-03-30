@@ -77,12 +77,12 @@ pub struct BinOp<'arena> {
 
 #[derive(Debug, PartialEq)]
 pub struct ExprVar<'arena> {
-    pos: Pos<'arena>,
-    name: Symbol<'arena>,
-    from_with: bool,
-    level: Level,
+    pub pos: Pos<'arena>,
+    pub name: Symbol<'arena>,
+    pub from_with: bool,
+    pub level: Level,
     /// Displacement
-    displ: Displ,
+    pub displ: Displ,
 }
 
 impl<'arena> ExprExt for ExprVar<'arena> {
@@ -205,3 +205,5 @@ pub enum Expr<'arena> {
     ConcatStrings(ExprConcatStrings<'arena>),
     Pos(Pos<'arena>),
 }
+
+impl<'arena> ExprExt for Expr<'arena> {}

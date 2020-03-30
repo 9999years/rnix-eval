@@ -18,5 +18,6 @@ pub mod value;
 pub mod value_to_json;
 pub mod value_to_xml;
 
+pub use crate::err::{NixError, NixResult};
 pub use crate::symbol_table::{Symbol, SymbolTable};
 pub use crate::value::Value;

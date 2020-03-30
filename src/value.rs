@@ -6,7 +6,7 @@ use ordered_float::OrderedFloat;
 
 pub use crate::attr_set::Bindings;
 pub use crate::env::Env;
-pub use crate::nix_expr::{Expr, ExprLambda};
+pub use crate::nix_expr::{Expr, ExprExt, ExprLambda};
 pub use crate::primops::PrimOp;
 
 pub type NixInt = i64;
@@ -57,7 +57,7 @@ pub enum Value<'arena> {
     List(Vec<Value<'arena>>),
     Thunk(Thunk<'arena>),
     App(Box<App<'arena>>),
-    Lambda,
+    Lambda(Lambda<'arena>),
     Blackhole,
     PrimOp(PrimOp),
     PrimOpApp(Box<App<'arena>>),
