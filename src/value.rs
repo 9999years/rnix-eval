@@ -5,30 +5,29 @@ use std::path::PathBuf;
 use ordered_float::OrderedFloat;
 
 pub use crate::attr_set::Bindings;
-pub use crate::eval::Env;
-pub use crate::nix_expr::Expr;
+pub use crate::env::Env;
+pub use crate::nix_expr::{Expr, ExprLambda};
 pub use crate::primops::PrimOp;
 
 pub type NixInt = i64;
 pub type NixFloat = OrderedFloat<f64>;
-pub type ExprLambda = ();
 
-#[derive(Debug, Hash, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Thunk<'arena> {
-    pub env: Env,
+    pub env: Env<'arena>,
     pub expr: Expr<'arena>,
 }
 
-#[derive(Debug, Hash, PartialEq)]
-pub struct App {
-    pub left: Value,
-    pub right: Value,
+#[derive(Debug, PartialEq)]
+pub struct App<'arena> {
+    pub left: Value<'arena>,
+    pub right: Value<'arena>,
 }
 
-#[derive(Debug, Hash, PartialEq)]
-pub struct Lambda {
-    pub env: Env,
-    pub fun: Expr<'arena>::Lambda,
+#[derive(Debug, PartialEq)]
+pub struct Lambda<'arena> {
+    pub env: Env<'arena>,
+    pub fun: ExprLambda<'arena>,
 }
 
 #[derive(Debug, Hash, PartialEq)]
@@ -46,27 +45,27 @@ impl NixString {
     }
 }
 
-#[derive(Debug, Hash, PartialEq)]
-pub enum Value {
+#[derive(Debug, PartialEq)]
+pub enum Value<'arena> {
     Int(NixInt),
     Bool(bool),
     String(NixString),
     Path(PathBuf),
     Null,
-    Attrs(Bindings),
+    Attrs(Bindings<'arena>),
     /// `List` represents `tList1`, `tList2` and `tListN`.
-    List(Vec<Value>),
-    Thunk(Thunk),
-    App(Box<App>),
+    List(Vec<Value<'arena>>),
+    Thunk(Thunk<'arena>),
+    App(Box<App<'arena>>),
     Lambda,
     Blackhole,
     PrimOp(PrimOp),
-    PrimOpApp(Box<App>),
+    PrimOpApp(Box<App<'arena>>),
     External,
     Float(NixFloat),
 }
 
-struct ValueDisplay {
-    value: Value,
-    active: HashSet<Value>,
+struct ValueDisplay<'arena> {
+    value: Value<'arena>,
+    active: HashSet<Value<'arena>>,
 }

@@ -1,6 +1,7 @@
 pub mod attr_path;
 pub mod attr_set;
 pub mod common_eval_args;
+pub mod env;
 pub mod err;
 pub mod eval;
 pub mod eval_inline;
@@ -10,8 +11,12 @@ pub mod imported_drv_to_derivation;
 pub mod json_to_value;
 pub mod names;
 pub mod nix_expr;
+pub mod pos;
 pub mod primops;
 pub mod symbol_table;
 pub mod value;
 pub mod value_to_json;
 pub mod value_to_xml;
+
+pub use crate::symbol_table::{Symbol, SymbolTable};
+pub use crate::value::Value;

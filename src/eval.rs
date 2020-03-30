@@ -1,27 +1,14 @@
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use crate::nix_expr::{Expr, Pos, StaticEnv};
+use crate::env::{Env, StaticEnv};
+use crate::nix_expr::{Expr, ExprVar};
+use crate::pos::Pos;
 use crate::symbol_table::{Symbol, SymbolTable};
 use crate::value::Value;
 
-#[derive(Debug, Hash, PartialEq)]
-pub enum EnvKind {
-    Plain,
-    HasWithExpr,
-    HasWithAttrs,
-}
-
-#[derive(Debug, Hash, PartialEq)]
-pub struct Env {
-    pub up: Box<Env>,
-    pub prev_with: u16,
-    pub kind: EnvKind,
-    pub values: Vec<Value>,
-}
-
-pub type FileParseCache = HashMap<PathBuf, Box<Expr>>;
-pub type FileEvalCache = HashMap<PathBuf, Value>;
+pub type FileParseCache<'arena> = HashMap<PathBuf, Box<Expr<'arena>>>;
+pub type FileEvalCache<'arena> = HashMap<PathBuf, Value<'arena>>;
 pub type SearchPathElem = (String, String); // ???
 pub type SearchPath = Vec<SearchPathElem>;
 
@@ -58,17 +45,17 @@ pub struct EvalState<'arena> {
     /// The allowed filesystem paths in restricted or pure evaluation
     /// mode.
     pub allowed_paths: Option<HashSet<PathBuf>>,
-    pub empty_set: Value,
+    pub empty_set: Value<'arena>,
     // If set, force copying files to the Nix store even if they
     // already exist there.
     // RepairFlag
     // Store
     // SrcToStore
     /// A cache from path names to parse trees.
-    file_parse_cache: FileParseCache,
+    file_parse_cache: FileParseCache<'arena>,
 
     /// A cache from path names to values.
-    file_eval_cache: FileEvalCache,
+    file_eval_cache: FileEvalCache<'arena>,
 
     search_path: SearchPath,
     search_path_resolved: HashMap<String, (bool, String)>,
@@ -79,7 +66,7 @@ pub struct EvalState<'arena> {
 
     /// The base environment, containing the builtin functions and
     /// values.
-    pub base_env: Box<Env>,
+    pub base_env: Box<Env<'arena>>,
 
     /// The same as `base_env`, but used during parsing to resolve variables.
     static_base_env: StaticEnv<'arena>,
@@ -101,4 +88,19 @@ pub struct EvalState<'arena> {
     // primop_calls: HashMap<Symbol<'arena>, usize>,
     // function_calls: HashMap<ExprLambda, usize>,
     // attr_selects: HashMap<Pos<'arena>, usize>,
+}
+
+pub enum Eval {
+    Yes,
+    No,
+}
+
+impl<'arena> EvalState<'arena> {
+    pub fn lookup_var(
+        &self,
+        env: &Env<'arena>,
+        var: &ExprVar<'arena>,
+        should_eval: Eval,
+    ) -> Box<Value<'arena>> {
+    }
 }

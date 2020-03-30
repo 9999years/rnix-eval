@@ -5,6 +5,7 @@ pub mod from_toml;
 
 type PrimOpFun = ();
 
+#[derive(Debug, PartialEq)]
 pub struct PrimOp {
     name: String,
     arity: usize,

@@ -1,15 +1,13 @@
+use std::borrow::{Borrow, ToOwned};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::env::{Displ, Env, Level, StaticEnv, StaticEnvLevel};
+use crate::err::{NixError, NixResult};
+use crate::eval::EvalState;
+use crate::pos::Pos;
 use crate::symbol_table::{Symbol, SymbolTable};
-use crate::value::{NixFloat, NixInt};
-
-#[derive(Debug, PartialEq)]
-pub struct Pos<'arena> {
-    pub file: Symbol<'arena>,
-    pub line: usize,
-    pub column: usize,
-}
+use crate::value::{NixFloat, NixInt, Value};
 
 #[derive(Debug, PartialEq)]
 pub struct AttrName<'arena> {
@@ -25,7 +23,7 @@ pub struct AttrDef<'arena> {
     expr: Box<Expr<'arena>>,
     pos: Pos<'arena>,
     /// Displacement
-    displ: usize,
+    displ: Displ,
 }
 
 #[derive(Debug, PartialEq)]
@@ -47,8 +45,31 @@ pub struct Formals<'arena> {
     ellipsis: bool,
 }
 
+pub trait ExprExt {
+    fn bind_vars<'env>(&mut self, env: &StaticEnv<'env>) -> NixResult<()> {
+        Ok(())
+    }
+    fn eval<'a>(&'a self, state: &EvalState, env: &Env) -> NixResult<&'a Value>;
+    fn maybe_thunk<'a>(&'a self, state: &EvalState, env: &Env) -> &'a Value;
+    /// Storing function names.
+    fn set_name<'env>(name: Symbol<'env>) {}
+}
+
+#[derive(Debug, PartialEq)]
+pub enum OpKind {
+    App,
+    Eq,
+    NEq,
+    And,
+    Or,
+    Impl,
+    Update,
+    ConcatLists,
+}
+
 #[derive(Debug, PartialEq)]
 pub struct BinOp<'arena> {
+    kind: OpKind,
     pos: Pos<'arena>,
     e1: Box<Expr<'arena>>,
     e2: Box<Expr<'arena>>,
@@ -59,9 +80,42 @@ pub struct ExprVar<'arena> {
     pos: Pos<'arena>,
     name: Symbol<'arena>,
     from_with: bool,
-    level: usize,
+    level: Level,
     /// Displacement
-    displ: usize,
+    displ: Displ,
+}
+
+impl<'arena> ExprExt for ExprVar<'arena> {
+    fn bind_vars<'env>(&mut self, env: &StaticEnv<'env>) -> NixResult<()> {
+        // Check whether the variable appears in the environment. If so,
+        // set its level and displacement.
+        let with_level = None;
+        for env_level in env.into_iter() {
+            with_level = env_level.with_level;
+            if let Some(displ) = env_level.env.vars.get(&self.name) {
+                self.from_with = false;
+                self.level = env_level.level;
+                self.displ = *displ;
+                return Ok(());
+            }
+        }
+
+        match with_level {
+            None => Err(NixError::UndefinedVar(
+                self.name.into(),
+                self.pos.to_owned(),
+            )),
+            Some(with_level) => {
+                self.from_with = true;
+                self.level = with_level;
+                Ok(())
+            }
+        }
+    }
+
+    // fn eval<'a>(&'a self, state: &EvalState, env: &Env) -> &'a Value {
+    // }
+    // fn maybe_thunk<'a>(&'a self, state: &EvalState, env: &Env) -> &'a Value;
 }
 
 #[derive(Debug, PartialEq)]
@@ -106,7 +160,7 @@ pub struct ExprWith<'arena> {
     pos: Pos<'arena>,
     attrs: Box<Expr<'arena>>,
     body: Box<Expr<'arena>>,
-    prev_with: usize,
+    prev_with: Level,
 }
 
 #[derive(Debug, PartialEq)]
@@ -147,21 +201,7 @@ pub enum Expr<'arena> {
     If(ExprIf<'arena>),
     Assert(ExprAssert<'arena>),
     OpNot(Box<Expr<'arena>>),
-    App(BinOp<'arena>),
-    OpEq(BinOp<'arena>),
-    OpNEq(BinOp<'arena>),
-    OpAnd(BinOp<'arena>),
-    OpOr(BinOp<'arena>),
-    OpImpl(BinOp<'arena>),
-    OpUpdate(BinOp<'arena>),
-    OpConcatLists(BinOp<'arena>),
+    BinOp(BinOp<'arena>),
     ConcatStrings(ExprConcatStrings<'arena>),
     Pos(Pos<'arena>),
-}
-
-pub type Vars<'arena> = HashMap<Symbol<'arena>, usize>;
-pub struct StaticEnv<'arena> {
-    pub is_with: bool,
-    pub up: Box<StaticEnv<'arena>>,
-    pub vars: Vars<'arena>,
 }

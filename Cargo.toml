@@ -17,6 +17,7 @@ toml = "0.5.6"
 nom = "5.1.1"
 shawshank = "0.2.3"
 ordered-float = "1.0.2"
+derive_more = "0.99.5"
 
 [dev-dependencies]
 pretty_assertions = "0.6.1"
