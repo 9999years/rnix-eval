@@ -1,6 +1,7 @@
 pub mod attr_path;
 pub mod attr_set;
 pub mod common_eval_args;
+pub mod err;
 pub mod eval;
 pub mod eval_inline;
 pub mod function_trace;
