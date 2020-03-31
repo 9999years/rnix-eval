@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use crate::env::{Env, EnvKind, StaticEnv};
+use crate::attr_set::Bindings;
+use crate::env::{Env, EnvInner, StaticEnv};
 use crate::nix_expr::{Expr, ExprExt, ExprVar};
 use crate::pos::Pos;
 use crate::symbol_table::{Symbol, SymbolTable};
@@ -101,16 +102,16 @@ impl<'arena> EvalState<'arena> {
         &self,
         env: &Env<'arena>,
         expr: &'arena impl ExprExt,
-    ) -> NixResult<Value<'arena>> {
+    ) -> NixResult<Bindings<'arena>> {
         let ret = expr.eval(&self, env)?;
-        if matches!(ret, Value::Attrs(_)) {
+        if let Value::Attrs(attrs) = ret {
+            Ok(*attrs)
+        } else {
             Err(NixError::Type(format!(
                 // TODO pretty-print the value
                 "value is {:?} while a set was expected",
                 ret
             )))
-        } else {
-            Ok(*ret)
         }
     }
 
@@ -127,18 +128,38 @@ impl<'arena> EvalState<'arena> {
             .env;
 
         if !var.from_with {
-            return Ok(env.values[var.displ.0]);
-        }
-
-        loop {
-            if env.kind == EnvKind::HasWithExpr {
-                if should_eval == ShouldEval::No {
-                    return Err(NixError::VarLookupUnevaluated(var.name.into()));
-                }
-                // let value = self.eval_attrs(&env.up.unwrap(), env.values[0])?;
+            match env.values {
+                EnvInner::Plain(values) => return Ok(values[var.displ.0]),
+                EnvInner::HasWithAttrs(_) | EnvInner::HasWithExpr(_) => unreachable!(),
             }
         }
 
-        Ok(Value::Blackhole)
+        loop {
+            if let EnvInner::HasWithExpr(expr) = env.values {
+                if should_eval == ShouldEval::No {
+                    return Err(NixError::VarLookupUnevaluated(var.name.into()));
+                }
+                let value = self.eval_attrs(&env.up.unwrap(), &*expr)?;
+                env.values = EnvInner::HasWithAttrs(value);
+            }
+
+            let first_value = match env.values {
+                EnvInner::Plain(values) => match values[0] {
+                    Value::Attrs(bindings) => bindings,
+                    _ => unreachable!(),
+                },
+                EnvInner::HasWithAttrs(bindings) => bindings,
+                EnvInner::HasWithExpr(_) => unreachable!(),
+            };
+            if let Some((name, attr)) = first_value
+                .0
+                .into_iter()
+                .find(|(name, _)| name == &var.name)
+            {
+                return Ok(attr.value);
+            }
+        }
+
+        // Ok(Value::Blackhole)
     }
 }

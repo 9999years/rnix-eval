@@ -1,10 +1,12 @@
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 
 use derive_more::{Add, AddAssign, From, Into};
 
-use crate::symbol_table::Symbol;
-use crate::value::Value;
+use crate::attr_set::Bindings;
+use crate::nix_expr::{Expr, ExprAttrs};
+use crate::{Symbol, Value};
 
 /// A variable's environment level.
 #[derive(Debug, PartialEq, Copy, Clone, From, Into, Add, AddAssign)]
@@ -15,18 +17,17 @@ pub struct Level(pub usize);
 pub struct Displ(pub usize);
 
 #[derive(Debug, PartialEq)]
-pub enum EnvKind {
-    Plain,
-    HasWithExpr,
-    HasWithAttrs,
-}
-
-#[derive(Debug, PartialEq)]
 pub struct Env<'arena> {
     pub up: Option<Box<Env<'arena>>>,
     pub prev_with: Level,
-    pub kind: EnvKind,
-    pub values: Vec<Value<'arena>>,
+    pub values: EnvInner<'arena>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum EnvInner<'arena> {
+    Plain(Vec<Value<'arena>>),
+    HasWithExpr(Box<ExprAttrs<'arena>>),
+    HasWithAttrs(Bindings<'arena>),
 }
 
 impl<'arena> IntoIterator for Env<'arena> {
@@ -38,7 +39,7 @@ impl<'arena> IntoIterator for Env<'arena> {
 }
 
 pub struct EnvLevel<'arena> {
-    pub env: Box<Env<'arena>>,
+    pub env: &'arena Env<'arena>,
     pub level: Level,
 }
 
@@ -62,7 +63,7 @@ impl<'arena> Iterator for EnvIter<'arena> {
         // If the current env is None, return early.
         let env = self.cur_env?;
         let ret = Some(EnvLevel {
-            env,
+            env: env.borrow(),
             level: self.level,
         });
 

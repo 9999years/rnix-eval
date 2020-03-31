@@ -8,18 +8,10 @@ use crate::Value;
 #[derive(Debug, PartialEq)]
 pub struct Attr<'arena> {
     pub name: Symbol<'arena>,
-    pub value: AttrValue<'arena>,
+    pub value: &'arena AttrValue<'arena>,
 }
 
 impl<'arena> Eq for Attr<'arena> {}
-
-#[derive(Debug, PartialEq)]
-pub struct AttrValue<'arena> {
-    pub value: Value<'arena>,
-    pub pos: Pos<'arena>,
-}
-
-impl<'arena> Eq for AttrValue<'arena> {}
 
 impl PartialOrd for Attr<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -34,17 +26,22 @@ impl Ord for Attr<'_> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Bindings<'arena>(HashMap<Symbol<'arena>, AttrValue<'arena>>);
+pub struct AttrValue<'arena> {
+    pub value: Value<'arena>,
+    pub pos: Pos<'arena>,
+}
+
+impl<'arena> Eq for AttrValue<'arena> {}
+
+#[derive(Debug, PartialEq)]
+pub struct Bindings<'arena>(pub HashMap<Symbol<'arena>, AttrValue<'arena>>);
 
 impl<'arena> Bindings<'arena> {
-    fn sorted(&self) -> Vec<Attr<'arena>> {
+    fn sorted(&'arena self) -> Vec<Attr<'arena>> {
         let mut ret: Vec<_> = self
             .0
             .iter()
-            .map(|(name, value)| Attr {
-                name,
-                value: *value,
-            })
+            .map(|(name, value)| Attr { name, value })
             .collect();
         ret.sort();
         ret

@@ -113,9 +113,13 @@ impl<'arena> ExprExt for ExprVar<'arena> {
         }
     }
 
-    // fn eval<'a>(&'a self, state: &EvalState, env: &Env) -> &'a Value {
-    // }
-    // fn maybe_thunk<'a>(&'a self, state: &EvalState, env: &Env) -> &'a Value;
+    fn eval<'a>(&'a self, state: &EvalState, env: &Env) -> NixResult<&'a Value> {
+        unimplemented!()
+    }
+
+    fn maybe_thunk<'a>(&'a self, state: &EvalState, env: &Env) -> &'a Value {
+        unimplemented!()
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -137,6 +141,20 @@ pub struct ExprAttrs<'arena> {
     recursive: bool,
     attrs: HashMap<Symbol<'arena>, AttrDef<'arena>>,
     dynamic_attrs: Vec<DynamicAttrDef<'arena>>,
+}
+
+impl<'arena> ExprExt for ExprAttrs<'arena> {
+    fn bind_vars<'env>(&mut self, env: &StaticEnv<'env>) -> NixResult<()> {
+        unimplemented!()
+    }
+
+    fn eval<'a>(&'a self, state: &EvalState, env: &Env) -> NixResult<&'a Value> {
+        unimplemented!()
+    }
+
+    fn maybe_thunk<'a>(&'a self, state: &EvalState, env: &Env) -> &'a Value {
+        unimplemented!()
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -206,4 +224,16 @@ pub enum Expr<'arena> {
     Pos(Pos<'arena>),
 }
 
-impl<'arena> ExprExt for Expr<'arena> {}
+impl<'arena> ExprExt for Expr<'arena> {
+    fn bind_vars<'env>(&mut self, env: &StaticEnv<'env>) -> NixResult<()> {
+        unimplemented!()
+    }
+
+    fn eval<'a>(&'a self, state: &EvalState, env: &Env) -> NixResult<&'a Value> {
+        unimplemented!()
+    }
+
+    fn maybe_thunk<'a>(&'a self, state: &EvalState, env: &Env) -> &'a Value {
+        unimplemented!()
+    }
+}
